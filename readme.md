@@ -84,4 +84,3 @@ Email: commandodilipsingh@gmail.com
 
 ---
 
-repo - https://github.com/karkra911/internship-projects
