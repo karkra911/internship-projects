@@ -1,0 +1,25 @@
+# Python Calculator
+
+A simple calculator built using Python.
+
+## Features
+- Addition
+- Subtraction
+- Multiplication
+- Division
+
+## Technologies Used
+- Python
+
+## How to Run
+1. Install Python
+2. Run:
+python calculator.py
+
+## Project Purpose
+Built to practice Python basics, functions, and user input handling.
+
+## Future Improvements
+- GUI version
+- Scientific calculator
+- Error handling
