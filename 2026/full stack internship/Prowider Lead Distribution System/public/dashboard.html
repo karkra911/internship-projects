@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provider CRM Dashboard | Prowider Lead CRM</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+</head>
+<body>
+  
+  <header>
+    <div class="container nav-container">
+      <a href="index.html" class="logo">
+        <div class="logo-dot"></div>
+        Prowider CRM
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link">Submit Lead</a>
+        <a href="dashboard.html" class="nav-link active">Provider Dashboard</a>
+        <a href="tests.html" class="nav-link">Testing Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="margin-bottom: 3rem;">
+    <div class="hero" style="padding: 2.5rem 0 2rem;">
+      <h1>Real-Time <span>Provider Dashboard</span></h1>
+      <p>Monitor real-time lead distributions, quota usages, and recent assignments for all 8 providers.</p>
+    </div>
+
+    <!-- Providers Grid -->
+    <div id="providersGrid" class="grid-3">
+      <!-- Cards will be dynamically inserted here -->
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+        Loading dashboard data...
+      </div>
+    </div>
+  </main>
+
+  <!-- Real-time notifications container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <footer>
+    <p>&copy; 2026 Prowider Lead Distribution CRM. Powered by Server-Sent Events (SSE).</p>
+  </footer>
+
+  <script>
+    // Fetch and render provider dashboards
+    async function loadDashboard() {
+      try {
+        const response = await fetch('/api/providers');
+        if (!response.ok) throw new Error('Network error');
+        
+        const providers = await response.json();
+        renderProviders(providers);
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+        document.getElementById('providersGrid').innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--danger);">
+            <strong>Error:</strong> Failed to fetch dashboard data. Please make sure the server is running.
+          </div>
+        `;
+      }
+    }
+
+    // Render providers to grid
+    function renderProviders(providers) {
+      const grid = document.getElementById('providersGrid');
+      grid.innerHTML = '';
+
+      providers.forEach(p => {
+        const remainingQuota = p.quotaLimit - p.quotaUsed;
+        const quotaPercentage = (p.quotaUsed / p.quotaLimit) * 100;
+        
+        // Quota styling
+        let barClass = 'quota-safe';
+        if (remainingQuota <= 3 && remainingQuota > 0) {
+          barClass = 'quota-warning';
+        } else if (remainingQuota === 0) {
+          barClass = 'quota-full';
+        }
+
+        // Build assignments HTML
+        let assignmentsHtml = '';
+        if (p.assignments && p.assignments.length > 0) {
+          p.assignments.forEach(asg => {
+            const lead = asg.lead;
+            const date = new Date(asg.assignedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // Service badge color
+            let badgeClass = 'lead-service-1';
+            if (lead.serviceType === 'Service 2') badgeClass = 'lead-service-2';
+            if (lead.serviceType === 'Service 3') badgeClass = 'lead-service-3';
+
+            assignmentsHtml += `
+              <div class="assigned-lead-item">
+                <div class="lead-header-row">
+                  <span>${escapeHTML(lead.name)}</span>
+                  <span class="lead-badge ${badgeClass}">${escapeHTML(lead.serviceType)}</span>
+                </div>
+                <div class="lead-desc">${escapeHTML(lead.description)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                  📍 ${escapeHTML(lead.city)} &bull; 🕒 ${date}
+                </div>
+              </div>
+            `;
+          });
+        } else {
+          assignmentsHtml = `<div class="no-leads">No leads assigned yet</div>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'card provider-card';
+        card.innerHTML = `
+          <div class="provider-header">
+            <span class="provider-name">${escapeHTML(p.name)}</span>
+            <span class="provider-id-badge">ID: ${p.id}</span>
+          </div>
+
+          <div class="quota-container">
+            <div class="quota-label">
+              <span>Remaining Quota</span>
+              <strong>${remainingQuota} / ${p.quotaLimit}</strong>
+            </div>
+            <div class="quota-bar-bg">
+              <div class="quota-bar-fill ${barClass}" style="width: ${quotaPercentage}%"></div>
+            </div>
+          </div>
+
+          <div class="leads-list-title">Assigned Leads (${p.assignments.length})</div>
+          <div class="assigned-leads">
+            ${assignmentsHtml}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Helper to escape HTML characters
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Show Toast Notification
+    function showToast(title, body, isReset = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${isReset ? 'toast-reset' : ''}`;
+      toast.innerHTML = `
+        <div class="toast-title">${escapeHTML(title)}</div>
+        <div class="toast-body">${escapeHTML(body)}</div>
+      `;
+      container.appendChild(toast);
+
+      // Auto dismiss after 5 seconds
+      setTimeout(() => {
+        toast.style.animation = 'toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) reverse forwards';
+        setTimeout(() => toast.remove(), 350);
+      }, 5000);
+    }
+
+    // Listen to real-time server-sent events
+    function connectSSE() {
+      const eventSource = new EventSource('/api/updates');
+
+      eventSource.addEventListener('leadAssigned', (event) => {
+        const data = JSON.parse(event.data);
+        const providerNames = data.assignedProviderNames.join(', ');
+        
+        showToast(
+          '🎯 New Lead Assigned!', 
+          `Lead '${data.lead.name}' for ${data.lead.serviceType} was assigned to: ${providerNames || 'None (no quota)'}`
+        );
+        
+        // Reload layout
+        loadDashboard();
+      });
+
+      eventSource.addEventListener('quotasReset', (event) => {
+        const data = JSON.parse(event.data);
+        
+        showToast(
+          '🔁 Quotas Reset!', 
+          data.message,
+          true
+        );
+        
+        // Reload layout
+        loadDashboard();
+      });
+
+      eventSource.onerror = (err) => {
+        console.error('SSE connection lost. Reconnecting in 3s...');
+        eventSource.close();
+        setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // Init
+    loadDashboard();
+    connectSSE();
+  </script>
+</body>
+</html>

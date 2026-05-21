@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Test Panel | Prowider Lead CRM</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>">
+</head>
+<body>
+  
+  <header>
+    <div class="container nav-container">
+      <a href="index.html" class="logo">
+        <div class="logo-dot"></div>
+        Prowider CRM
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link">Submit Lead</a>
+        <a href="dashboard.html" class="nav-link">Provider Dashboard</a>
+        <a href="tests.html" class="nav-link active">Testing Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="margin-bottom: 3rem;">
+    <div class="hero" style="padding: 2.5rem 0 2rem;">
+      <h1>System <span>Testing Panel</span></h1>
+      <p>Simulate concurrent API requests, trigger webhooks, test database constraints, and verify system stability under load.</p>
+    </div>
+
+    <div class="test-panel">
+      <!-- Test Controls -->
+      <div>
+        <!-- Test 1: Webhook Quota Reset -->
+        <div class="card test-section">
+          <h3>1. Webhook Quota Reset</h3>
+          <p>Triggers the webhook endpoint to reset all provider quota usages back to 10 (sets quotaUsed to 0).</p>
+          <div class="form-group">
+            <label for="webhookEventId">Webhook Event ID</label>
+            <div style="display: flex; gap: 0.75rem;">
+              <input type="text" id="webhookEventId" class="form-control" placeholder="event-uuid-12345" style="flex-grow: 1;">
+              <button id="genEventIdBtn" class="btn btn-secondary" style="padding: 0 1rem;">New ID</button>
+            </div>
+          </div>
+          <button id="triggerResetBtn" class="btn btn-primary" style="width: 100%;">
+            Trigger Reset Webhook
+          </button>
+        </div>
+
+        <!-- Test 2: Webhook Idempotency Test -->
+        <div class="card test-section">
+          <h3>2. Webhook Idempotency Test</h3>
+          <p>Fires 5 identical quota-reset requests concurrently (same Event ID). One should process successfully, and the remaining 4 should bypass processing safely.</p>
+          <button id="triggerIdempotencyBtn" class="btn btn-secondary" style="width: 100%;">
+            Run Idempotency Stress Test (5x Concurrent)
+          </button>
+        </div>
+
+        <!-- Test 3: Concurrency / Quota Stress Test -->
+        <div class="card test-section">
+          <h3>3. Quota & Concurrency Stress Test</h3>
+          <p>Creates 10 distinct leads concurrently. Verifies that provider quota limits (10/month) are not exceeded and round-robin allocations distribute tasks fairly under load.</p>
+          <button id="triggerStressTestBtn" class="btn btn-secondary" style="width: 100%;">
+            Generate 10 Leads Instantly
+          </button>
+        </div>
+
+        <!-- Test 4: Duplicate Prevention Test -->
+        <div class="card test-section">
+          <h3>4. Duplicate Prevention Test</h3>
+          <p>Fires 2 identical lead submissions (same phone and service type) concurrently. The database unique constraint should ensure only one succeeds and the other receives a conflict status.</p>
+          <button id="triggerDupTestBtn" class="btn btn-danger" style="width: 100%;">
+            Submit Duplicate Leads Concurrently
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Log Console -->
+      <div>
+        <div class="card console-card">
+          <div class="console-header">
+            <span style="font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 0.5rem;">
+              <span style="width: 8px; height: 8px; background-color: var(--secondary); border-radius: 50%; display: inline-block;"></span>
+              Live Test Output Console
+            </span>
+            <button id="clearConsoleBtn" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">
+              Clear Logs
+            </button>
+          </div>
+          <div id="consoleLogs" class="console-logs">
+            <div class="log-entry log-info"><span class="log-time">[System]</span> Ready to execute tests. Logs will display here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Prowider Lead Distribution CRM. Sandbox simulation tools.</p>
+  </footer>
+
+  <script>
+    // Initialize Webhook UUID on load
+    function generateUUID() {
+      return 'evt_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    }
+    
+    document.getElementById('webhookEventId').value = generateUUID();
+    
+    document.getElementById('genEventIdBtn').addEventListener('click', () => {
+      document.getElementById('webhookEventId').value = generateUUID();
+      logInfo('Generated new Webhook Event ID.');
+    });
+
+    // Logging helpers
+    const consoleBox = document.getElementById('consoleLogs');
+    
+    function logInfo(msg) {
+      log(msg, 'log-info');
+    }
+    
+    function logSuccess(msg) {
+      log(msg, 'log-success');
+    }
+    
+    function logError(msg) {
+      log(msg, 'log-error');
+    }
+
+    function log(msg, className) {
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${className}`;
+      entry.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
+      consoleBox.appendChild(entry);
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }
+
+    document.getElementById('clearConsoleBtn').addEventListener('click', () => {
+      consoleBox.innerHTML = '';
+      logInfo('Console logs cleared.');
+    });
+
+    // Webhook Quota Reset call
+    document.getElementById('triggerResetBtn').addEventListener('click', async () => {
+      const eventId = document.getElementById('webhookEventId').value.trim();
+      if (!eventId) {
+        logError('Webhook Event ID cannot be empty.');
+        return;
+      }
+
+      logInfo(`Triggering webhook quota reset for eventId: "${eventId}"...`);
+      try {
+        const response = await fetch('/api/webhook/reset-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          if (data.status === 'processed') {
+            logSuccess(`Success: ${data.message} Status: ${data.status}`);
+          } else {
+            logInfo(`Ignored: ${data.message} Status: ${data.status}`);
+          }
+        } else {
+          logError(`Error: ${data.error || 'Failed to trigger webhook.'}`);
+        }
+      } catch (err) {
+        logError(`Network error: ${err.message}`);
+      }
+    });
+
+    // Webhook Idempotency Stress Test
+    document.getElementById('triggerIdempotencyBtn').addEventListener('click', async () => {
+      const sharedEventId = generateUUID();
+      logInfo(`Starting Idempotency test using eventId: "${sharedEventId}"...`);
+      logInfo('Firing 5 concurrent POST requests to /api/webhook/reset-quota...');
+
+      const requests = Array.from({ length: 5 }).map((_, i) => {
+        return fetch('/api/webhook/reset-quota', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: sharedEventId })
+        }).then(res => res.json().then(data => ({ status: res.status, data, index: i + 1 })));
+      });
+
+      try {
+        const results = await Promise.all(requests);
+        let processedCount = 0;
+        let ignoredCount = 0;
+
+        results.forEach(res => {
+          if (res.status === 200) {
+            if (res.data.status === 'processed') {
+              processedCount++;
+              logSuccess(`Request #${res.index}: PROCESSED quota reset successfully.`);
+            } else if (res.data.status === 'ignored') {
+              ignoredCount++;
+              logInfo(`Request #${res.index}: IGNORED (Idempotency check passed). Message: "${res.data.message}"`);
+            }
+          } else {
+            logError(`Request #${res.index} failed: ${res.data.error || 'Unknown error'}`);
+          }
+        });
+
+        logInfo(`--- Summary ---`);
+        logInfo(`Processed: ${processedCount} time(s). (Target: 1)`);
+        logInfo(`Ignored: ${ignoredCount} time(s). (Target: 4)`);
+        if (processedCount === 1) {
+          logSuccess('✅ Webhook Idempotency constraint verified successfully!');
+        } else {
+          logError('❌ Idempotency constraint failed: Webhook was processed multiple times!');
+        }
+      } catch (err) {
+        logError(`Concurrency test failed: ${err.message}`);
+      }
+    });
+
+    // Quota & Concurrency Stress Test: Create 10 leads instantly
+    document.getElementById('triggerStressTestBtn').addEventListener('click', async () => {
+      logInfo('Starting Quota and Concurrency test...');
+      logInfo('Firing 10 concurrent requests to create different leads...');
+
+      const serviceTypes = ['Service 1', 'Service 2', 'Service 3'];
+      const cities = ['Miami, FL', 'Houston, TX', 'Phoenix, AZ', 'Boston, MA', 'Denver, CO'];
+
+      const requests = Array.from({ length: 10 }).map((_, i) => {
+        const randomNum = Math.floor(Math.random() * 1000000);
+        // Use unique phone numbers to avoid duplicate constraint checks
+        const lead = {
+          name: `Concurrent Lead ${i + 1}`,
+          phone: `555-${String(randomNum).padStart(6, '0')}`,
+          city: cities[i % cities.length],
+          serviceType: serviceTypes[i % serviceTypes.length],
+          description: `Stress test concurrency job. Lead index #${i + 1}`
+        };
+
+        return fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lead)
+        }).then(res => res.json().then(data => ({ status: res.status, data, lead })));
+      });
+
+      try {
+        const results = await Promise.all(requests);
+        let successCount = 0;
+        let conflictCount = 0;
+
+        results.forEach((res, index) => {
+          if (res.status === 201) {
+            successCount++;
+            const providers = res.data.assignedProviderNames.join(', ');
+            logSuccess(`Lead #${index + 1} (${res.lead.serviceType}) Created successfully. Assigned: ${providers || 'None'}`);
+          } else {
+            conflictCount++;
+            logError(`Lead #${index + 1} Failed: ${res.data.error || 'Unknown error'}`);
+          }
+        });
+
+        logInfo(`--- Summary ---`);
+        logInfo(`Successfully Created & Distributed: ${successCount}/10 leads.`);
+        if (conflictCount > 0) {
+          logInfo(`Failed to Create: ${conflictCount}/10 leads (possible quota limits reached).`);
+        }
+        logInfo('Check the Provider Dashboard to review details on allocation distributions and remaining quotas.');
+      } catch (err) {
+        logError(`Stress test error: ${err.message}`);
+      }
+    });
+
+    // Duplicate Prevention Concurrency Test
+    document.getElementById('triggerDupTestBtn').addEventListener('click', async () => {
+      const dupPhone = `555-DUP-${Math.floor(Math.random() * 9000 + 1000)}`;
+      const dupService = 'Service 1';
+
+      logInfo(`Starting Duplicate Prevention Test...`);
+      logInfo(`Submitting 2 concurrent leads with phone: "${dupPhone}" and serviceType: "${dupService}"...`);
+
+      const leadData = {
+        name: 'John TestDuplicate',
+        phone: dupPhone,
+        city: 'Austin, TX',
+        serviceType: dupService,
+        description: 'Duplicate lead validation request.'
+      };
+
+      const requests = [
+        fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(leadData)
+        }).then(res => res.json().then(data => ({ status: res.status, data, reqId: 1 }))),
+        fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(leadData)
+        }).then(res => res.json().then(data => ({ status: res.status, data, reqId: 2 })))
+      ];
+
+      try {
+        const results = await Promise.all(requests);
+        let successRes = null;
+        let conflictRes = null;
+
+        results.forEach(res => {
+          if (res.status === 201) {
+            successRes = res;
+          } else if (res.status === 409) {
+            conflictRes = res;
+          } else {
+            logError(`Request #${res.reqId} returned status ${res.status}: ${res.data.error || 'Unknown error'}`);
+          }
+        });
+
+        if (successRes) {
+          logSuccess(`Request #${successRes.reqId} succeeded with 201 (Lead Created and Assigned).`);
+        } else {
+          logError('Neither request succeeded!');
+        }
+
+        if (conflictRes) {
+          logSuccess(`Request #${conflictRes.reqId} failed with 409 (Conflict). Message: "${conflictRes.data.error}"`);
+        } else {
+          logError('Duplicate request was NOT blocked! (Expected one 409 error)');
+        }
+
+        if (successRes && conflictRes) {
+          logSuccess('✅ Duplicate prevention validation completed successfully! Database unique constraints validated.');
+        } else {
+          logError('❌ Duplicate prevention check failed.');
+        }
+      } catch (err) {
+        logError(`Duplicate test execution error: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>

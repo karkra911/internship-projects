@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Provider {
+  id          Int          @id
+  name        String
+  quotaLimit  Int          @default(10)
+  quotaUsed   Int          @default(0)
+  assignments Assignment[]
+}
+
+model Lead {
+  id          String       @id @default(uuid())
+  name        String
+  phone       String
+  city        String
+  serviceType String       // "Service 1", "Service 2", "Service 3"
+  description String
+  createdAt   DateTime     @default(now())
+  assignments Assignment[]
+
+  @@unique([phone, serviceType])
+}
+
+model Assignment {
+  id          String   @id @default(uuid())
+  leadId      String
+  providerId  Int
+  assignedAt  DateTime @default(now())
+  
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, providerId])
+}
+
+model WebhookEvent {
+  eventId     String   @id
+  processedAt DateTime @default(now())
+}
+
+model RoundRobinState {
+  poolName  String @id // "POOL_1", "POOL_2", "POOL_3"
+  nextIndex Int    @default(0)
+}

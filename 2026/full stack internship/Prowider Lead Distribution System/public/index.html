@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Lead | Prowider Lead CRM</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+</head>
+<body>
+  
+  <header>
+    <div class="container nav-container">
+      <a href="index.html" class="logo">
+        <div class="logo-dot"></div>
+        Prowider CRM
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link active">Submit Lead</a>
+        <a href="dashboard.html" class="nav-link">Provider Dashboard</a>
+        <a href="tests.html" class="nav-link">Testing Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <h1>Need a Service? <br><span>Request a Provider Instantly</span></h1>
+      <p>Submit your service request. Our automated intelligent routing matches you to three top-rated local providers in real-time.</p>
+    </div>
+
+    <div style="max-width: 600px; margin: 0 auto 3rem; width: 100%;">
+      <div class="card">
+        <div id="alertBox" class="alert"></div>
+
+        <form id="leadForm">
+          <div class="form-group">
+            <label for="name">Your Name</label>
+            <input type="text" id="name" class="form-control" placeholder="John Doe" required>
+          </div>
+
+          <div class="grid-2" style="gap: 1.5rem;">
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" class="form-control" placeholder="+1 (555) 019-2834" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="city">City</label>
+              <input type="text" id="city" class="form-control" placeholder="Austin, TX" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="serviceType">Service Required</label>
+            <select id="serviceType" class="form-control" required>
+              <option value="" disabled selected>Select a service type...</option>
+              <option value="Service 1">Service 1 (Roofing & Repairs)</option>
+              <option value="Service 2">Service 2 (Electrical & Power)</option>
+              <option value="Service 3">Service 3 (Plumbing & Water)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Job Description</label>
+            <textarea id="description" class="form-control" placeholder="Please describe what needs to be fixed or serviced..." required></textarea>
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+            Submit Request & Matches
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Prowider Lead Distribution CRM. Built with strong backend concurrency controls.</p>
+  </footer>
+
+  <script>
+    document.getElementById('leadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const alertBox = document.getElementById('alertBox');
+      
+      // Reset Alert
+      alertBox.style.display = 'none';
+      alertBox.className = 'alert';
+      
+      // Get inputs
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const city = document.getElementById('city').value.trim();
+      const serviceType = document.getElementById('serviceType').value;
+      const description = document.getElementById('description').value.trim();
+
+      // Disable button during submission
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Routing service request...';
+
+      try {
+        const response = await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, city, serviceType, description })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Success
+          alertBox.style.display = 'block';
+          alertBox.className = 'alert alert-success';
+          alertBox.innerHTML = `
+            <strong>Success!</strong> Your request was received.<br>
+            Intelligently distributed to ${data.assignmentsCount} providers: 
+            <strong>${data.assignedProviderNames.join(', ') || 'None (out of quota)'}</strong>.
+          `;
+          document.getElementById('leadForm').reset();
+        } else {
+          // Error
+          alertBox.style.display = 'block';
+          alertBox.className = 'alert alert-error';
+          alertBox.innerHTML = `<strong>Error:</strong> ${data.error || 'Failed to submit request.'}`;
+        }
+      } catch (err) {
+        alertBox.style.display = 'block';
+        alertBox.className = 'alert alert-error';
+        alertBox.innerHTML = '<strong>Network Error:</strong> Cannot reach the server. Please try again.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request & Matches';
+      }
+    });
+  </script>
+</body>
+</html>
